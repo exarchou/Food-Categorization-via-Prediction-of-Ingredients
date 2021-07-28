@@ -19,8 +19,8 @@
 # Average Ingredients per image: 7.321413861386139
 # Train loss: -0.369  Train acc.: 0.374  Top-5 acc.: 0.579  Test loss: -0.362  Test acc.: 0.365  Top-5 acc.: 0.579
 # Training complete in 337m 54s
-# Test Top-1 Accuracy = 0.4020792079207921
-# Test Top-5 Accuracy = 0.6268811881188119 # Kalutero epeidi exei ekpaideutei sto na genikeuei tis foto (train_transforms)
+# Test Top-1 Accuracy = 0.402079207920792
+# Test Top-5 Accuracy = 0.626881188118811 # Kalutero epeidi exei ekpaideutei sto na genikeuei tis foto (train_transforms)
 # =============================================================================
 
 
