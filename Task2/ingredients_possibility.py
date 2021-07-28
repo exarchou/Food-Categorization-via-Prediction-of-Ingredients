@@ -1,3 +1,14 @@
+# =============================================================================
+# Task2b: Food101 Images Multiclass Classification using Ingredients and Possibilities Theory
+# Last Edit: 28/07/2021
+# Test Top-1 Accuracy = 0.267960396039604
+# Test Top-5 Accuracy = 0.5511584158415842
+# Evaluation time: 3:57:28
+# =============================================================================
+
+
+
+
 #%% STEP 0: Import Libraries, Load necessary files and Create Dataloaders
 # Import Libraries
 import os
@@ -40,8 +51,6 @@ f = open("X:/datasets/food-101//meta/classes.txt", "r")
 classes = []
 for line in f: 
     classes.append(line[:len(line)-1])
-
-
 
 
 
@@ -92,9 +101,7 @@ val_loader = torch.utils.data.DataLoader(dataset=val_set, batch_size=batch_size,
 
 
 
-#%% STEP 2: Predict Class with Possibilities Theory
-
-
+#%% STEP 3: Create the table of possibilities
 def imshow(inp, title=None):
     """Imshow for Tensor."""
     inp = inp.cpu().numpy().transpose((1, 2, 0))
@@ -116,48 +123,6 @@ def label2onehot(list):
     return my_array
 
 
-
-# ============================================================================= 
-# my_images, my_classes = next(iter(testloader))
-# print(my_images.shape, my_classes.shape)
-# 
-# 
-# torch.cuda.empty_cache()
-# my_images = my_images.to(device)
-# my_classes = my_classes.to(device)
-# 
-# img_encoder = img_encoder.to(device)
-# ingr_decoder = ingr_decoder.to(device)
-# 
-# 
-# with torch.no_grad():
-#     
-#     features = img_encoder(my_images)
-#     print(features.shape)
-#     ingr_ids, ingr_logits = ingr_decoder.sample(None, None, greedy=True,
-#                                                 temperature=1.0, img_features=features,
-#                                                 first_token_value=0, replacement=False)
-#     
-# print(ingr_ids.shape, ingr_logits.shape)
-# 
-# for j in range(4):
-#     
-#     imshow(my_images[j], classes[my_classes[j]])
-#     print("="*20)
-#     for i in range(len(ingr_ids[j])):     
-#         if ingr_ids[j][i] != 0: 
-#             print(ingrs_vocab[ingr_ids[j][i]]) 
-#     print("="*20)
-# 
-# print()
-# print()
-# print()
-# =============================================================================
-
-
-
-
-
 # Calculate the sums per column vector: namely the total appearances of each ingredient 
 sums_vector = ingrs_per_class.sum(axis=0)
 
@@ -171,19 +136,10 @@ for i in tqdm(range(ingrs_per_class.shape[0])):
 
 
 
-# # Save possibilities
-# with open(os.path.join(output_data_dir, 'Task2/' + type_of_dataset + '/ingrs_per_class_poss.pkl'), 'wb') as fp:   
-#     pickle.dump(ingrs_per_class_poss, fp)
-
-# # Load possibilities
-# ingrs_per_class_poss = pickle.load(open(os.path.join(output_data_dir, 'Task2/' + type_of_dataset + '/ingrs_per_class_poss.pkl'), 'rb'))
-
-
-
-
-#%% Predicting step: for each input image we create an empty vector of 101 cells. Each cell
-#   corresponds to the possibility of each class. For each of the predcted ingredients, a 
-#   score is summed up in the corresponding class cell.
+#%% STEP3: Predicting step: 
+# For each input image we create an empty vector of 101 cells. Each cell
+# corresponds to the possibility of each class. For each of the predicted 
+# ingredients, a score is summed up in the corresponding class cell.
 
 top1_accuracy, top5_accuracy = 0, 0
 
@@ -211,42 +167,15 @@ for entry in tqdm(ingrs_and_class):
             break
 
 
+top1_accuracy /= len(ingrs_and_class)
+top5_accuracy /= len(ingrs_and_class)
 
 
-# =============================================================================
-# accuracy = 0
-# 
-# for each_image in tqdm(range(my_images.shape[0])):
-# 
-#     image_from_batch = each_image
-#     class_scores = np.zeros((101,), dtype=float)
-#     
-#     for i in range(len(ingr_ids[image_from_batch])):    
-#         for possible_class in range(my_table.shape[0]):
-#             
-#             if ingr_ids[image_from_batch][i] != 0: 
-#                 class_scores[possible_class] += my_table[possible_class][ingr_ids[image_from_batch][i]]
-#                   
-#     pred_class = np.argmax(class_scores, axis=0)   
-#     
-# # =============================================================================
-# #     print("predicted class", pred_class)
-# #     print("real class", my_classes[image_from_batch])
-# #         
-# # =============================================================================
-#     
-#     if (pred_class == my_classes[image_from_batch]):
-#         accuracy += 1
-#     
-#     
-# accuracy /= my_images.shape[0]
-# print("\nAccuracy:", accuracy)
-# =============================================================================
-    
-
-
-
-
-
+print("\n\n")
+print("="*40)
+print("Test Top-1 Accuracy =", top1_accuracy)
+print("Test Top-5 Accuracy =", top5_accuracy)
+print("="*40)
+print("\n\n")
 
 

@@ -1,5 +1,5 @@
 # =============================================================================
-# Task2: Food101 Images Multiclass Classification using Ingredients
+# Task2a: Food101 Images Multiclass Classification using Ingredients
 # Last Edit: 27/07/2021
 # 
 # 
