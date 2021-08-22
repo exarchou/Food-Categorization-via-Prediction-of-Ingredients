@@ -354,9 +354,11 @@ id2class_custom = replace_value(id2class_custom, 'olive_oil', 'NOISE_CLASS') ## 
 id2class_custom = replace_value(id2class_custom, 'spinach_pie', 'NOISE_CLASS') ### Too many problems for this class
 
 
-# Save edited id2class dic
-with open(os.path.join(output_dataset_dir, 'id2class_custom.pkl'), 'wb') as f:
-    pickle.dump(id2class_custom, f)
+# =============================================================================
+# # Save edited id2class dic
+# with open(os.path.join(output_dataset_dir, 'id2class_custom.pkl'), 'wb') as f:
+#     pickle.dump(id2class_custom, f)
+# =============================================================================
 
 
 # =============================================================================
@@ -405,9 +407,11 @@ for key in id2class_custom:
     id2class_custom_valids[key] = id2class_custom[key]
 
 counter = 0
+
 for key in id2class_custom:
 
     word = id2class_custom[key]
+    
     try:
         vec = word2vec_model[word]
            
@@ -419,8 +423,8 @@ uniqueValues = set(id2class_custom_valids.values())
 print("Total invalids:", counter)
 print('Unique Values:', len(uniqueValues))
 
-with open(os.path.join(output_dataset_dir, 'id2class_custom_valids.pkl'), 'wb') as f:
-    pickle.dump(id2class_custom_valids, f)
+# with open(os.path.join(output_dataset_dir, 'id2class_custom_valids.pkl'), 'wb') as f:
+#     pickle.dump(id2class_custom_valids, f)
 
 
 # Find invalids after the replacement

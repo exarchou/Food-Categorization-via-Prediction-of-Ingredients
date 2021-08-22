@@ -1,15 +1,15 @@
 # =============================================================================
-# Script 5: train and evaluate an LSTM model for the classification problem of Recipe 1M
-# Edition: bidirectional LSTMs with trainable embedding matrix and replaced noisy classes
+# Script to train and evaluate an LSTM model for the classification problem of Recipe1M
+# Reloaded Edition of train_model.py: 2 LSTMS of 256 and 512 neurons
 # Author: Dimitrios-Marios Exarchou
-# Last modified: 6/8/2021   
+# Last modified: 8/8/2021   
 # 
-# Top-1   Accuracy = 30.61 %
-# Top-10  Accuracy = 43.53 %
-# Top-20  Accuracy = 48.22 %
-# Top-50  Accuracy = 55.85 %
-# 
-# Training time: 54m 29s
+# Top-1   Accuracy = 31.84 %
+# Top-10  Accuracy = 44.68 %
+# Top-20  Accuracy = 49.19 %
+# Top-50  Accuracy = 56.64 %
+#
+# Training time: 181m 45s
 # =============================================================================
 
 
@@ -49,7 +49,7 @@ im2recipe_data_dir = 'X:/thesis_outputs/InverseCooking'
 word2vec_data      = 'X:/thesis_outputs/Task3/word2vec_data'
 output_dataset_dir = 'X:/thesis_outputs/Task3/final_dataset'
 annoy_indexer_dir  = 'X:/thesis_outputs/Task3/annoy_index'
-save_output_dir    = 'X:/thesis_outputs/Task3/train_model'
+save_output_dir    = 'X:/thesis_outputs/Task3/train_model_reloaded'
 
 EMBEDDING_VECTOR_LENGTH = 300
 MAX_SEQUENCE_LENGTH = 20
@@ -83,8 +83,8 @@ LSTM_model.add(Embedding(len(ingr_vocab),                                   # nu
                          input_length=MAX_SEQUENCE_LENGTH,                  # max number of ingredients
                          trainable=True))
 LSTM_model.add(Dropout(0.2))
-LSTM_model.add(Bidirectional(LSTM(128, dropout=0.2, recurrent_dropout=0.5, return_sequences=True)))
-LSTM_model.add(Bidirectional(LSTM(128, dropout=0.2, recurrent_dropout=0.5)))
+LSTM_model.add(Bidirectional(LSTM(512, dropout=0.2, recurrent_dropout=0.5, return_sequences=True)))
+LSTM_model.add(Bidirectional(LSTM(256, dropout=0.2, recurrent_dropout=0.5)))
 LSTM_model.add(Dense(EMBEDDING_VECTOR_LENGTH, activation='relu'))
 
 LSTM_model.summary()
@@ -104,7 +104,7 @@ def get_lr_metric(optimizer):
 def lr_step_decay(epoch):
 	initial_lrate = 0.005
 	drop = 0.2
-	epochs_drop = 10.0
+	epochs_drop = 10
 	lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
 	return lrate
 
@@ -121,7 +121,7 @@ LSTM_model.compile(loss='mse', optimizer=optimizer, metrics=[metrics.CosineSimil
 
 # Model Train
 since = time.time()  
-history = LSTM_model.fit(X_train, y_train, epochs=30, batch_size=1024, validation_data=(X_valid, y_valid), verbose=1, callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)]) 
+history = LSTM_model.fit(X_train, y_train, epochs=24, batch_size=256, validation_data=(X_valid, y_valid), verbose=1, callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)]) 
 time_elapsed = time.time() - since
 print('\nTraining complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))   
  
@@ -131,130 +131,103 @@ print('\nTraining complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_e
 # Training log stats 
 # 
 # Epoch 00001: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 1/30
-# 272/272 [==============================] - 110s 406ms/step - loss: 0.0294 - cosine_similarity: 0.4843 - lr: 0.0050 - val_loss: 0.0287 - val_cosine_similarity: 0.5042 - val_lr: 0.0050
+# Epoch 1/24
+# 1086/1086 [==============================] - 452s 416ms/step - loss: 0.0291 - cosine_similarity: 0.4930 - val_loss: 0.0281 - val_cosine_similarity: 0.5179
 # 
 # Epoch 00002: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 2/30
-# 272/272 [==============================] - 108s 396ms/step - loss: 0.0284 - cosine_similarity: 0.5106 - lr: 0.0050 - val_loss: 0.0281 - val_cosine_similarity: 0.5174 - val_lr: 0.0050
+# Epoch 2/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0279 - cosine_similarity: 0.5218 - val_loss: 0.0278 - val_cosine_similarity: 0.5253
 # 
 # Epoch 00003: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 3/30
-# 272/272 [==============================] - 107s 392ms/step - loss: 0.0280 - cosine_similarity: 0.5198 - lr: 0.0050 - val_loss: 0.0279 - val_cosine_similarity: 0.5230 - val_lr: 0.0050
+# Epoch 3/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0277 - cosine_similarity: 0.5270 - val_loss: 0.0276 - val_cosine_similarity: 0.5282
 # 
 # Epoch 00004: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 4/30
-# 272/272 [==============================] - 107s 394ms/step - loss: 0.0278 - cosine_similarity: 0.5241 - lr: 0.0050 - val_loss: 0.0277 - val_cosine_similarity: 0.5257 - val_lr: 0.0050
+# Epoch 4/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0276 - cosine_similarity: 0.5292 - val_loss: 0.0276 - val_cosine_similarity: 0.5292
 # 
 # Epoch 00005: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 5/30
-# 272/272 [==============================] - 108s 397ms/step - loss: 0.0277 - cosine_similarity: 0.5269 - lr: 0.0050 - val_loss: 0.0277 - val_cosine_similarity: 0.5277 - val_lr: 0.0050
+# Epoch 5/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0275 - cosine_similarity: 0.5306 - val_loss: 0.0276 - val_cosine_similarity: 0.5296
 # 
 # Epoch 00006: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 6/30
-# 272/272 [==============================] - 108s 397ms/step - loss: 0.0276 - cosine_similarity: 0.5287 - lr: 0.0050 - val_loss: 0.0276 - val_cosine_similarity: 0.5288 - val_lr: 0.0050
+# Epoch 6/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0275 - cosine_similarity: 0.5317 - val_loss: 0.0275 - val_cosine_similarity: 0.5303
 # 
 # Epoch 00007: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 7/30
-# 272/272 [==============================] - 110s 406ms/step - loss: 0.0276 - cosine_similarity: 0.5298 - lr: 0.0050 - val_loss: 0.0276 - val_cosine_similarity: 0.5298 - val_lr: 0.0050
+# Epoch 7/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0274 - cosine_similarity: 0.5326 - val_loss: 0.0275 - val_cosine_similarity: 0.5307
 # 
 # Epoch 00008: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 8/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0275 - cosine_similarity: 0.5308 - lr: 0.0050 - val_loss: 0.0275 - val_cosine_similarity: 0.5303 - val_lr: 0.0050
+# Epoch 8/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0274 - cosine_similarity: 0.5334 - val_loss: 0.0275 - val_cosine_similarity: 0.5303
 # 
 # Epoch 00009: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 9/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0275 - cosine_similarity: 0.5314 - lr: 0.0050 - val_loss: 0.0275 - val_cosine_similarity: 0.5305 - val_lr: 0.0050
+# Epoch 9/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0274 - cosine_similarity: 0.5339 - val_loss: 0.0275 - val_cosine_similarity: 0.5311
 # 
 # Epoch 00010: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 10/30
-# 272/272 [==============================] - 108s 397ms/step - loss: 0.0274 - cosine_similarity: 0.5337 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5321 - val_lr: 1.0000e-03
+# Epoch 10/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0272 - cosine_similarity: 0.5378 - val_loss: 0.0274 - val_cosine_similarity: 0.5326
 # 
 # Epoch 00011: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 11/30
-# 272/272 [==============================] - 108s 398ms/step - loss: 0.0273 - cosine_similarity: 0.5341 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5323 - val_lr: 1.0000e-03
+# Epoch 11/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0271 - cosine_similarity: 0.5389 - val_loss: 0.0274 - val_cosine_similarity: 0.5329
 # 
 # Epoch 00012: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 12/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0273 - cosine_similarity: 0.5345 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5324 - val_lr: 1.0000e-03
+# Epoch 12/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0271 - cosine_similarity: 0.5396 - val_loss: 0.0274 - val_cosine_similarity: 0.5328
 # 
 # Epoch 00013: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 13/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0273 - cosine_similarity: 0.5347 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5325 - val_lr: 1.0000e-03
+# Epoch 13/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0271 - cosine_similarity: 0.5401 - val_loss: 0.0274 - val_cosine_similarity: 0.5326
 # 
 # Epoch 00014: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 14/30
-# 272/272 [==============================] - 109s 402ms/step - loss: 0.0273 - cosine_similarity: 0.5349 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5325 - val_lr: 1.0000e-03
+# Epoch 14/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0270 - cosine_similarity: 0.5406 - val_loss: 0.0274 - val_cosine_similarity: 0.5326
 # 
 # Epoch 00015: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 15/30
-# 272/272 [==============================] - 107s 395ms/step - loss: 0.0273 - cosine_similarity: 0.5351 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5325 - val_lr: 1.0000e-03
+# Epoch 15/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0270 - cosine_similarity: 0.5410 - val_loss: 0.0274 - val_cosine_similarity: 0.5326
 # 
 # Epoch 00016: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 16/30
-# 272/272 [==============================] - 107s 394ms/step - loss: 0.0273 - cosine_similarity: 0.5353 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5327 - val_lr: 1.0000e-03
+# Epoch 16/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0270 - cosine_similarity: 0.5415 - val_loss: 0.0275 - val_cosine_similarity: 0.5321
 # 
 # Epoch 00017: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 17/30
-# 272/272 [==============================] - 108s 396ms/step - loss: 0.0273 - cosine_similarity: 0.5354 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5326 - val_lr: 1.0000e-03
+# Epoch 17/24
+# 1086/1086 [==============================] - 453s 417ms/step - loss: 0.0270 - cosine_similarity: 0.5420 - val_loss: 0.0275 - val_cosine_similarity: 0.5322
 # 
 # Epoch 00018: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 18/30
-# 272/272 [==============================] - 107s 392ms/step - loss: 0.0273 - cosine_similarity: 0.5356 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5328 - val_lr: 1.0000e-03
+# Epoch 18/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0270 - cosine_similarity: 0.5424 - val_loss: 0.0275 - val_cosine_similarity: 0.5320
 # 
 # Epoch 00019: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 19/30
-# 272/272 [==============================] - 108s 396ms/step - loss: 0.0273 - cosine_similarity: 0.5358 - lr: 0.0010 - val_loss: 0.0274 - val_cosine_similarity: 0.5328 - val_lr: 1.0000e-03
+# Epoch 19/24
+# 1086/1086 [==============================] - 453s 418ms/step - loss: 0.0269 - cosine_similarity: 0.5429 - val_loss: 0.0275 - val_cosine_similarity: 0.5318
 # 
 # Epoch 00020: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 20/30
-# 272/272 [==============================] - 108s 399ms/step - loss: 0.0272 - cosine_similarity: 0.5365 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
+# Epoch 20/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0269 - cosine_similarity: 0.5443 - val_loss: 0.0275 - val_cosine_similarity: 0.5317
 # 
 # Epoch 00021: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 21/30
-# 272/272 [==============================] - 108s 397ms/step - loss: 0.0272 - cosine_similarity: 0.5367 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5330 - val_lr: 2.0000e-04
+# Epoch 21/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0269 - cosine_similarity: 0.5446 - val_loss: 0.0275 - val_cosine_similarity: 0.5316
 # 
 # Epoch 00022: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 22/30
-# 272/272 [==============================] - 108s 398ms/step - loss: 0.0272 - cosine_similarity: 0.5367 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5332 - val_lr: 2.0000e-04
+# Epoch 22/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0268 - cosine_similarity: 0.5449 - val_loss: 0.0275 - val_cosine_similarity: 0.5315
 # 
 # Epoch 00023: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 23/30
-# 272/272 [==============================] - 109s 399ms/step - loss: 0.0272 - cosine_similarity: 0.5368 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
+# Epoch 23/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0268 - cosine_similarity: 0.5450 - val_loss: 0.0275 - val_cosine_similarity: 0.5314
 # 
 # Epoch 00024: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 24/30
-# 272/272 [==============================] - 107s 395ms/step - loss: 0.0272 - cosine_similarity: 0.5368 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
+# Epoch 24/24
+# 1086/1086 [==============================] - 454s 418ms/step - loss: 0.0268 - cosine_similarity: 0.5452 - val_loss: 0.0275 - val_cosine_similarity: 0.5312
 # 
-# Epoch 00025: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 25/30
-# 272/272 [==============================] - 107s 394ms/step - loss: 0.0272 - cosine_similarity: 0.5368 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
-# 
-# Epoch 00026: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 26/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0272 - cosine_similarity: 0.5369 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5330 - val_lr: 2.0000e-04
-# 
-# Epoch 00027: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 27/30
-# 272/272 [==============================] - 109s 399ms/step - loss: 0.0272 - cosine_similarity: 0.5370 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
-# 
-# Epoch 00028: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 28/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0272 - cosine_similarity: 0.5370 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5330 - val_lr: 2.0000e-04
-# 
-# Epoch 00029: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 29/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0272 - cosine_similarity: 0.5371 - lr: 2.0000e-04 - val_loss: 0.0274 - val_cosine_similarity: 0.5331 - val_lr: 2.0000e-04
-# 
-# Epoch 00030: LearningRateScheduler reducing learning rate to 4.000000000000001e-05.
-# Epoch 30/30
-# 272/272 [==============================] - 109s 400ms/step - loss: 0.0272 - cosine_similarity: 0.5372 - lr: 4.0000e-05 - val_loss: 0.0274 - val_cosine_similarity: 0.5332 - val_lr: 4.0000e-05
-# 
-# Training complete in 54m 29s
+# Training complete in 181m 45s
 # =============================================================================
-
-
-
 
 
 
@@ -270,7 +243,7 @@ for i in range(len(y_test_int)):
 top1_accuracy, top10_accuracy, top20_accuracy, top50_accuracy = 0, 0, 0, 0
 
 # Predictions
-predictions = LSTM_model.predict(X_test, batch_size=512, verbose=1)
+predictions = LSTM_model.predict(X_test, batch_size=256, verbose=1)
 y_pred = []
 
 for i in tqdm(range(len(predictions))):
@@ -337,7 +310,7 @@ for key in classes_acc:
     if classes_acc[key] != 0:
         counter += 1
         
-print('Number of classes with at least one correct prediction:', counter) #201
+print('Number of classes with at least one correct prediction:', counter) #257
 
 
 # Confusion Matrix
@@ -378,26 +351,26 @@ cm_df = pd.DataFrame(cm, columns=classes_names, index=classes_names)
 
 #%% Save classes stats, confusion matrix and model
 
-with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
-    pickle.dump(classes_acc, fp)
+# with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
+#     pickle.dump(classes_acc, fp)
 
-with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
-    pickle.dump(classes_distribution_test, fp)
-
-
-with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
-    pickle.dump(cm, fp)
-
-with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
-    pickle.dump(cm_df, fp)
+# with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
+#     pickle.dump(classes_distribution_test, fp)
 
 
-with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
-    pickle.dump(history.history, fp)
+# with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
+#     pickle.dump(cm, fp)
 
-LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_30.6.h5'))
+# with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
+#     pickle.dump(cm_df, fp)
 
-model = load_model(os.path.join(save_output_dir, 'LSTM_model_30.6.h5'))
+
+# with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
+#     pickle.dump(history.history, fp)
+
+# LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_31.84.h5'))
+
+model = load_model(os.path.join(save_output_dir, 'LSTM_model_31.84.h5'))
 
 
 
@@ -408,10 +381,8 @@ with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
 
 loss_list        = train_history['loss']
 cos_sim_list     = train_history['cosine_similarity']
-lr_list          = train_history['lr']
 val_loss_list    = train_history['val_loss']
 val_cos_sim_list = train_history['val_cosine_similarity']
-val_lr_list      = train_history['val_lr']
 
 
 
@@ -426,8 +397,3 @@ plt.plot(val_cos_sim_list, label='Test Cos. Sim.')
 plt.legend(frameon=False)
 plt.savefig(os.path.join(save_output_dir, 'cos_sim.jpg'), transparent=True, dpi=200)
 plt.show()
-
-
-
-
-
