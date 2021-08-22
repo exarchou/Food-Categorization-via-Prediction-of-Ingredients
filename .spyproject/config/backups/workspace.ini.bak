@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['Task3\\build_dataset.py', 'Task3\\split_dataset.py', 'Task3\\replace_invalids.py', '..\\thesis_past\\code_23_05_21\\replacing_invalids.py', '..\\thesis_past\\code_23_05_21\\HANDLE_LOW_ACCURATE_CLASSES.py', '..\\thesis_past\\code_23_05_21\\training_model_bi_trainable_em_BOOSTED_2.py']
+recent_files = ['Task3\\recipe1m\\build_dataset.py', 'Task3\\recipe1m\\split_dataset.py', 'Task3\\recipe1m\\replace_invalids.py', 'Task3\\recipe1m\\train_model.py']
 
