@@ -7,6 +7,7 @@
 # 
 # Ingredients used: 283
 # Average Ingredients per image: 7.534871287128713
+# Epochs 40
 # Train loss: -0.420  Train acc.: 0.430  Top-5 acc.: 0.615  Test loss: -0.381  Test acc.: 0.385  Top-5 acc.: 0.606
 # Training complete in 33m 45s
 # Test Top-1 Accuracy = 0.4072277227722772
@@ -17,6 +18,7 @@
 # 
 # Ingredients used: 337
 # Average Ingredients per image: 7.321413861386139
+# Epochs 40
 # Train loss: -0.369  Train acc.: 0.374  Top-5 acc.: 0.579  Test loss: -0.362  Test acc.: 0.365  Top-5 acc.: 0.579
 # Training complete in 337m 54s
 # Test Top-1 Accuracy = 0.402079207920792
