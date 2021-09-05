@@ -52,7 +52,6 @@ annoy_index.load(annoy_indexer_dir)
 
 
 #%% t-SNE
-"Creates TSNE model and plots it"
 labels = []
 tokens = []
 
