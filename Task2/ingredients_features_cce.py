@@ -18,11 +18,11 @@
 # 
 # Ingredients used: 337
 # Average Ingredients per image: 7.321413861386139
-# Epochs
-# Train loss: ~
-# Training complete in ~
-# Test Top-1 Accuracy = ~
-# Test Top-5 Accuracy = ~ # Kalutero epeidi exei ekpaideutei sto na genikeuei tis foto (train_transforms)
+# Epochs 22
+# Train loss: 2.601  Train acc.: 0.363  Top-5 acc.: 0.642  Test loss: 2.607  Test acc.: 0.361  Top-5 acc.: 0.640
+# Training complete in 189m 26s
+# Test Top-1 Accuracy = 0.4022772277227723
+# Test Top-5 Accuracy = 0.6842574257425743 # Better beacuse it had learned generalisation
 # =============================================================================
 
 
@@ -54,7 +54,7 @@ im2recipe_data_dir = 'X:/thesis_outputs/InverseCooking'
 output_data_dir = 'X:/thesis_outputs'
 
 # Specify type of dataset
-type_of_dataset = 'simple_dataset'
+type_of_dataset = 'augmented_dataset'
 
 
 
@@ -371,7 +371,7 @@ def training_loop(epochs, criterion, optimizer, scheduler, train_loader, val_loa
 
 
 # Training Parameters
-epochs = 40
+epochs = 22
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(task2_Classifier.parameters(), lr=0.01, momentum=0.9)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', threshold=0.02, factor=0.2, patience=3)
