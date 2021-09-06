@@ -1,9 +1,9 @@
 # =============================================================================
 # Task2b: Food101 Images Multiclass Classification using Ingredients and Possibilities Theory
-# Last Edit: 28/07/2021
-# Test Top-1 Accuracy = 0.267960396039604
-# Test Top-5 Accuracy = 0.551158415841584
-# Evaluation time: 3:57:28
+# Last Edit: 06/09/2021
+# Test Top-1 Accuracy = 0.3283960396039604
+# Test Top-5 Accuracy = 0.6087029702970297
+# Evaluation time: 4:13:26
 # =============================================================================
 
 
@@ -136,22 +136,22 @@ for i in tqdm(range(ingrs_per_class.shape[0])):
 
 
 #%% STEP3: Predicting step: 
-# For each input image we create an empty vector of 101 cells. Each cell
-# corresponds to the possibility of each class. For each of the predicted 
-# ingredients, a score is summed up in the corresponding class cell.
+# For each input image we create an one-initialized vector of 101 cells. Each cell 
+# corresponds to the possibility of each class. For each of the predicted ingredients, 
+# a score is multiplied in the corresponding class cell.
 
 top1_accuracy, top5_accuracy = 0, 0
 
 for entry in tqdm(ingrs_and_class):
     
     pred_ingredients, real_class = entry['ingredients'], entry['class']
-    class_scores = np.zeros((101,), dtype=float)
+    class_scores = np.ones((101,), dtype=float)
     
     for index in range(len(pred_ingredients)):
         for possible_class in range(ingrs_per_class_poss.shape[0]):
             
             if pred_ingredients[index] == True:
-                class_scores[possible_class] += ingrs_per_class_poss[possible_class][index]
+                class_scores[possible_class] *= ingrs_per_class_poss[possible_class][index]
         
     top5_classes = heapq.nlargest(5, range(len(class_scores)), class_scores.take)
         
@@ -176,5 +176,4 @@ print("Test Top-1 Accuracy =", top1_accuracy)
 print("Test Top-5 Accuracy =", top5_accuracy)
 print("="*40)
 print("\n\n")
-
 
