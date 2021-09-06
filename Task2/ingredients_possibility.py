@@ -1,5 +1,5 @@
 # =============================================================================
-# Task2b: Food101 Images Multiclass Classification using Ingredients and Possibilities Theory
+# Task2b: Food101 Images Multiclass Classification using Possibility Theory
 # Last Edit: 06/09/2021
 # Test Top-1 Accuracy = 0.3283960396039604
 # Test Top-5 Accuracy = 0.6087029702970297
