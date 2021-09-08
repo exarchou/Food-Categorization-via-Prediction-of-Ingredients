@@ -351,24 +351,24 @@ cm_df = pd.DataFrame(cm, columns=classes_names, index=classes_names)
 
 #%% Save classes stats, confusion matrix and model
 
-with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
-    pickle.dump(classes_acc, fp)
+# with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
+#     pickle.dump(classes_acc, fp)
 
-with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
-    pickle.dump(classes_distribution_test, fp)
-
-
-with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
-    pickle.dump(cm, fp)
-
-with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
-    pickle.dump(cm_df, fp)
+# with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
+#     pickle.dump(classes_distribution_test, fp)
 
 
-with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
-    pickle.dump(history.history, fp)
+# with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
+#     pickle.dump(cm, fp)
 
-LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
+# with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
+#     pickle.dump(cm_df, fp)
+
+
+# with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
+#     pickle.dump(history.history, fp)
+
+# LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
 
 
 
@@ -376,7 +376,6 @@ LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
 
 
 #%% Plot Learning curves
-
 model = load_model(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
 
 with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
@@ -400,4 +399,84 @@ plt.plot(val_cos_sim_list, label='Test Cos. Sim.')
 plt.legend(frameon=False)
 plt.savefig(os.path.join(save_output_dir, 'cos_sim.jpg'), transparent=True, dpi=200)
 plt.show()
+
+
+
+#%% Plot Classes' Accuracies
+with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'rb') as fp:   
+    classes_acc = pickle.load(fp)
+
+with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'rb') as fp:    
+    classes_distribution_test = pickle.load(fp)
+
+with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'rb') as fp:    
+    confusion_matrix = pickle.load(fp)
+
+with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'rb') as fp:     
+    confusion_matrix_dataframe = pickle.load(fp)
+
+
+
+#%% Calculate Recall and Precision
+recall    = np.diag(confusion_matrix) / np.sum(confusion_matrix, axis = 1)
+precision = np.diag(confusion_matrix) / np.sum(confusion_matrix, axis = 0)
+
+# Handle NaN values (divisions with zero)
+recall[np.isnan(recall)], precision[np.isnan(precision)] = 0, 0
+
+# Find Average Recall and Precision
+recall_avg, precision_avg = np.mean(recall), np.mean(precision)
+f_score = 2 * precision_avg * recall_avg / (precision_avg + recall_avg)
+
+print()
+print('=' * 20)
+print(f' Recall    = { recall_avg * 100    :.2f}%')
+print(f' Precision = { precision_avg * 100 :.2f}%')
+print(f' F-score   = { f_score * 100       :.2f}%')
+print('=' * 20)
+
+
+# Find Average Recall and Precision only for the classes that have at least one correct prediction (257)
+counter_non_zeros = 0
+
+for i in range(len(recall)):  
+    if recall[i] != 0:     
+        counter_non_zeros += 1
+        
+recall_avg_nonzeros = np.sum(recall) / counter_non_zeros
+
+
+counter_non_zeros = 0
+
+for i in range(len(precision)): 
+    if precision[i] != 0:     
+        counter_non_zeros += 1
+
+precision_avg_nonzeros = np.sum(precision) / counter_non_zeros
+
+f_score_non_zeros = 2 * precision_avg_nonzeros * recall_avg_nonzeros / (precision_avg_nonzeros + recall_avg_nonzeros)
+
+print()
+print('=' * 33)
+print(f' Recall of non-zeros    = { recall_avg_nonzeros * 100    :.2f}%')
+print(f' Precision of non-zeros = { precision_avg_nonzeros * 100 :.2f}%')
+print(f' F-score of non-zeros   = { f_score_non_zeros * 100      :.2f}%')
+print('=' * 33)
+
+
+
+# =============================================================================
+# ====================
+#  Recall    = 34.49%
+#  Precision = 42.51%
+#  F-score   = 38.08%
+# ====================
+# 
+# =================================
+#  Recall of non-zeros    = 34.83%
+#  Precision of non-zeros = 42.94%
+#  F-score of non-zeros   = 38.46%
+# =================================
+# =============================================================================
+
 
