@@ -1,16 +1,16 @@
 # =============================================================================
-# Script to train and evaluate an LSTM model for the classification problem of fixed Recipe1M
+# Script to train and evaluate an LSTM model for the classification problem of Recipe1M
+# 5. Simple version with bi LSTM, trainable EM and cos. sim. as cost function
 # Author: Dimitrios-Marios Exarchou
 # Last modified: 13/9/2021   
+# 
+# Top-1   Accuracy = 28.70%
+# Top-10  Accuracy = 43.58%
+# Top-20  Accuracy = 48.32%
+# Top-50  Accuracy = 55.87%
+#
+# Training complete in 7m 32s
 # =============================================================================
-
-
-# Arguments
-dropout           = 0.30
-recurrent_dropout = 0.30
-units             = 256
-batch_size        = 512
-
 
 
 
@@ -23,11 +23,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from keras import metrics
 from keras.models import Sequential
-from keras.layers import Embedding, LSTM, Dense, Bidirectional
+from keras.layers import Embedding, LSTM, Dense, Dropout, Bidirectional
 from keras.initializers import Constant
 from keras.models import load_model
-from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger, ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger,ReduceLROnPlateau
 from keras.optimizers import Adam
 from gensim.models import KeyedVectors
 from gensim.similarities.annoy import AnnoyIndexer
@@ -37,40 +38,30 @@ from sklearn.utils.class_weight import compute_class_weight
 
 
 
-
 #%% STEP 2: Loading necessary files
 # Directories
-im2recipe_data_dir = 'X:/thesis_outputs/InverseCooking'
-word2vec_data      = 'X:/thesis_outputs/Task3/word2vec_data'
-output_dataset_dir = 'X:/thesis_outputs/Task3/final_dataset'
-annoy_indexer_dir  = 'X:/thesis_outputs/Task3/annoy_index'
-save_output_dir    = f'X:/thesis_experiments/D{dropout:.2f}_RD{recurrent_dropout:.2f}/L{units:d}_L{units:d}'
-print(save_output_dir)
+
+save_output_dir = 'X:/thesis_experiments/initial/5'
 
 EMBEDDING_VECTOR_LENGTH = 300
 MAX_SEQUENCE_LENGTH = 20
 
-ingr_vocab = pickle.load(open(os.path.join(im2recipe_data_dir, 'ingr_vocab.pkl'), 'rb'))
-embedding_matrix = pickle.load(open(os.path.join(word2vec_data, 'embedding_matrix.pkl'), 'rb'))
-id2class_reloaded  = pickle.load(open(os.path.join(output_dataset_dir, 'id2class_reloaded.pkl'), 'rb'))
-id2class_custom  = pickle.load(open(os.path.join(output_dataset_dir, 'id2class_custom.pkl'), 'rb'))
-id2class_custom_valids  = pickle.load(open(os.path.join(output_dataset_dir, 'id2class_custom_valids.pkl'), 'rb'))
+ingr_vocab = pickle.load(open('X:/thesis_experiments/initial/data_initial/ingr_vocab.pkl', 'rb'))
+embedding_matrix = pickle.load(open('X:/thesis_experiments/initial/data_initial/word2vec_data/embedding_matrix.pkl', 'rb'))
+id2class_custom  = pickle.load(open('X:/thesis_experiments/initial/data_initial/id2class_reloaded.pkl', 'rb'))
 
-X_train = pickle.load(open(os.path.join(output_dataset_dir, 'X_train_word2vec.pkl'), 'rb'))
-y_train = pickle.load(open(os.path.join(output_dataset_dir, 'y_train_word2vec.pkl'), 'rb'))
-X_valid = pickle.load(open(os.path.join(output_dataset_dir, 'X_valid_word2vec.pkl'), 'rb'))
-y_valid = pickle.load(open(os.path.join(output_dataset_dir, 'y_valid_word2vec.pkl'), 'rb'))
-X_test  = pickle.load(open(os.path.join(output_dataset_dir, 'X_test_word2vec.pkl'), 'rb'))
-y_test  = pickle.load(open(os.path.join(output_dataset_dir, 'y_test_word2vec.pkl'), 'rb'))
-y_test_int = np.loadtxt(os.path.join(output_dataset_dir, 'y_test_int.txt'), dtype=int)
+X_train = pickle.load(open('X:/thesis_experiments/initial/data_initial/X_train_word2vec.pkl', 'rb'))
+y_train = pickle.load(open('X:/thesis_experiments/initial/data_initial/y_train_word2vec.pkl', 'rb'))
+X_valid = pickle.load(open('X:/thesis_experiments/initial/data_initial/X_valid_word2vec.pkl', 'rb'))
+y_valid = pickle.load(open('X:/thesis_experiments/initial/data_initial/y_valid_word2vec.pkl', 'rb'))
+X_test  = pickle.load(open('X:/thesis_experiments/initial/data_initial/X_test_word2vec.pkl', 'rb'))   
+y_test  = pickle.load(open('X:/thesis_experiments/initial/data_initial/y_test_word2vec.pkl', 'rb'))
+y_test_int = np.loadtxt('X:/thesis_experiments/initial/data_initial/y_test_int.txt', dtype=int)
 
-word2vec_model = KeyedVectors.load_word2vec_format(os.path.join(word2vec_data, 'GoogleNews-vectors-negative300.bin'), binary=True)
+
+word2vec_model = KeyedVectors.load_word2vec_format(('X:/thesis_experiments/initial/data_initial/word2vec_data/GoogleNews-vectors-negative300.bin'), binary=True)
 annoy_index = AnnoyIndexer()
-annoy_index.load(annoy_indexer_dir)
-
-# Create a file
-file_object = open(os.path.join(save_output_dir, 'meta.txt'), 'a')
-
+annoy_index.load('X:/thesis_experiments/initial/data_initial/word2vec_data/annoy_index')
 
 
 
@@ -82,12 +73,11 @@ LSTM_model.add(Embedding(len(ingr_vocab),                                   # nu
                          embeddings_initializer=Constant(embedding_matrix), # initialization of matrix 
                          input_length=MAX_SEQUENCE_LENGTH,                  # max number of ingredients
                          trainable=True))
-LSTM_model.add(Bidirectional(LSTM(units, dropout=dropout, recurrent_dropout=recurrent_dropout, return_sequences=True)))
-LSTM_model.add(Bidirectional(LSTM(units, dropout=dropout, recurrent_dropout=recurrent_dropout)))
+LSTM_model.add(Bidirectional(LSTM(128, dropout=0.0, recurrent_dropout=0.0, return_sequences=True)))
+LSTM_model.add(Bidirectional(LSTM(128, dropout=0.0, recurrent_dropout=0.0)))
 LSTM_model.add(Dense(EMBEDDING_VECTOR_LENGTH, activation='tanh'))
 
 LSTM_model.summary()
-
 
 
 
@@ -99,25 +89,23 @@ since = time.time()
 optimizer = Adam(learning_rate=0.002)
 
 # Model Compile
-LSTM_model.compile(loss='cosine_similarity', optimizer=optimizer)
+LSTM_model.compile(loss='cosine_similarity', optimizer=optimizer, metrics=[metrics.MeanSquaredError()])
 
 # Callbacks
-filepath = os.path.join(save_output_dir, 'weights-{epoch:02d}-{val_loss:.4f}.hdf5')                                                    # File name includes epoch and validation accuracy
+filepath = os.path.join(save_output_dir, 'weights-{epoch:02d}-{abs(val_loss):.4f}.hdf5')                                               # File name includes epoch and validation accuracy
 checkpoint = ModelCheckpoint(filepath, monitor='val_loss', save_best_only=True, mode='min', verbose=1)                                 # Use Mode = max for accuracy and min for loss
-early_stop = EarlyStopping(monitor='val_loss', mode='min', min_delta = 0.00025, patience=6, restore_best_weights=True, verbose=1)      # Early Stopping if val loss does not drop for at least 0.00025 in 6 epochs.                
+early_stop = EarlyStopping(monitor='val_loss', mode='min', min_delta = 0.00025, patience=8, restore_best_weights=True, verbose=1)      # Early Stopping if val loss does not drop for at least 0.00025 in 10 epochs.                
 log_csv = CSVLogger(os.path.join(save_output_dir, 'my_logs2csv') , separator='\t', append=True)                                        # CSVLogger logs epoch, acc, loss, val_acc, val_loss
-reduce_lr = ReduceLROnPlateau(monitor='val_loss', mode='min', factor=0.2, patience=3, min_delta=0.00025, verbose=1)                    # Redule lr if val loss does not drop for at least 0.00025 at 3 epochs.
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', mode='min', factor=0.2, patience=4, min_delta=0.00025, verbose=1)                    # Redule lr if val loss does not drop for at least 0.00025 at 4 epochs.
 callbacks_list = [checkpoint, early_stop, log_csv, reduce_lr]
 
 
 # Model Train
-history = LSTM_model.fit(X_train, y_train, epochs=24, batch_size=batch_size, validation_data=(X_valid, y_valid), verbose=1, callbacks=callbacks_list) 
+history = LSTM_model.fit(X_train, y_train, epochs=24, batch_size=2048, validation_data=(X_valid, y_valid), verbose=1, callbacks=callbacks_list) 
 
 time_elapsed = time.time() - since
 print('\nTraining complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))   
-file_object.write('Training complete in {:.0f}m {:.0f}s\n'.format(time_elapsed // 60, time_elapsed % 60))
-
-
+ 
 
 
 
@@ -126,13 +114,13 @@ file_object.write('Training complete in {:.0f}m {:.0f}s\n'.format(time_elapsed /
 classes_acc = dict() 
 
 for i in range(len(y_test_int)):
-    classes_acc[id2class_custom_valids[y_test_int[i]]] = 0
+    classes_acc[id2class_custom[y_test_int[i]]] = 0
 
 # Find top-k Accuracies 
 top1_accuracy, top10_accuracy, top20_accuracy, top50_accuracy = 0, 0, 0, 0
 
 # Predictions
-predictions = LSTM_model.predict(X_test, batch_size=128, verbose=1)
+predictions = LSTM_model.predict(X_test, batch_size=512, verbose=1)
 y_pred = []
 
 for i in tqdm(range(len(predictions))):
@@ -149,26 +137,26 @@ for i in tqdm(range(len(predictions))):
     # Find the classes that are involved in approximate neighbors
     ranked_classes = []
     for potential_class in close_words:
-        if potential_class in id2class_custom_valids.values():
+        if potential_class in id2class_custom.values():
             ranked_classes.append(potential_class)
     
     y_pred.append(ranked_classes[0])
     
     # Top-1 Accuracy
-    if id2class_custom_valids[original_class] == ranked_classes[0]:
+    if id2class_custom[original_class] == ranked_classes[0]:
         top1_accuracy += 1
-        classes_acc[id2class_custom_valids[original_class]] += 1
+        classes_acc[id2class_custom[original_class]] += 1
         
     # Top-10 Accuracy
-    if id2class_custom_valids[original_class] in ranked_classes[:10]:
+    if id2class_custom[original_class] in ranked_classes[:10]:
         top10_accuracy += 1
                 
     # Top-20 Accuracy
-    if id2class_custom_valids[original_class] in ranked_classes[:20]:
+    if id2class_custom[original_class] in ranked_classes[:20]:
         top20_accuracy += 1
  
     # Top-50 Accuracy
-    if id2class_custom_valids[original_class] in ranked_classes[:50]:
+    if id2class_custom[original_class] in ranked_classes[:50]:
         top50_accuracy += 1
 
             
@@ -178,11 +166,6 @@ print(f'Top-10  Accuracy = { top10_accuracy * 100 / len(X_test) :.2f}%')
 print(f'Top-20  Accuracy = { top20_accuracy * 100 / len(X_test) :.2f}%')
 print(f'Top-50  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f}%')
 print('=' * 30)
-file_object.write(f'Top-1   Accuracy = {  top1_accuracy * 100 / len(X_test) :.2f}%\n')
-file_object.write(f'Top-10  Accuracy = { top10_accuracy * 100 / len(X_test) :.2f}%\n')
-file_object.write(f'Top-20  Accuracy = { top20_accuracy * 100 / len(X_test) :.2f}%\n')
-file_object.write(f'Top-50  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f}%\n')
-
 
 
 
@@ -191,10 +174,10 @@ file_object.write(f'Top-50  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f
 classes_distribution_test = dict()
 
 for i in range(len(y_test_int)):
-    classes_distribution_test[id2class_custom_valids[y_test_int[i]]] = 0
+    classes_distribution_test[id2class_custom[y_test_int[i]]] = 0
 
 for i in range(len(y_test_int)):
-    classes_distribution_test[id2class_custom_valids[y_test_int[i]]] += 1
+    classes_distribution_test[id2class_custom[y_test_int[i]]] += 1
 
 counter = 0
 
@@ -203,20 +186,19 @@ for key in classes_acc:
     if classes_acc[key] != 0:
         counter += 1
         
-print('Number of classes with at least one correct prediction:', counter) 
-file_object.write(f'Number of classes with at least one correct prediction = {counter :d}\n')
+print('Number of classes with at least one correct prediction:', counter) # 250
 
 # Confusion Matrix
 y_true = []
 
 for i in range(len(y_test_int)):
-    y_true.append(id2class_custom_valids[y_test_int[i]])
+    y_true.append(id2class_custom[y_test_int[i]])
     
 classes_names = []
 
-for key in id2class_custom_valids:
-    if id2class_custom_valids[key] not in classes_names:
-        classes_names.append(id2class_custom_valids[key])
+for key in id2class_custom:
+    if id2class_custom[key] not in classes_names:
+        classes_names.append(id2class_custom[key])
 
 confusion_matrix = confusion_matrix(y_true, y_pred, labels=classes_names)
 
@@ -238,10 +220,11 @@ cm_df = pd.DataFrame(confusion_matrix, columns=classes_names, index=classes_name
 
 
 
-
 #%% STEP 7: Plot Learning Curves
 train_history = history.history
+mse_list         = train_history['mean_squared_error']
 cos_sim_list     = train_history['loss']
+val_mse_list     = train_history['val_mean_squared_error']
 val_cos_sim_list = train_history['val_loss']
 
 # Plot Learning curves
@@ -251,6 +234,11 @@ plt.legend(frameon=False)
 plt.savefig(os.path.join(save_output_dir, 'Cos.Sim.jpg'), transparent=True, dpi=200)
 plt.show()
 
+plt.plot(mse_list, label='Train. MSE')
+plt.plot(val_mse_list, label='Val. MSE')
+plt.legend(frameon=False)
+plt.savefig(os.path.join(save_output_dir, 'MSE.jpg'), transparent=True, dpi=200)
+plt.show()
 
 
 
@@ -259,9 +247,9 @@ plt.show()
 # Unique Classes' Names
 classes_names = []
 
-for key in id2class_custom_valids:
-    if id2class_custom_valids[key] not in classes_names:
-        classes_names.append(id2class_custom_valids[key])
+for key in id2class_custom:
+    if id2class_custom[key] not in classes_names:
+        classes_names.append(id2class_custom[key])
 
 # Calculate Recall and Precision
 recall    = np.diag(confusion_matrix) / np.sum(confusion_matrix, axis = 1)
@@ -277,9 +265,6 @@ f_score = 2 * precision_avg * recall_avg / (precision_avg + recall_avg)
 print(f' Recall    = { recall_avg * 100    :.2f}%')
 print(f' Precision = { precision_avg * 100 :.2f}%')
 print(f' F-score   = { f_score * 100       :.2f}%')
-file_object.write(f'Recall    = { recall_avg * 100    :.2f}%\n')
-file_object.write(f'Precision = { precision_avg * 100 :.2f}%\n')
-file_object.write(f'F-score   = { f_score * 100       :.2f}%\n')
 
 
 # Find Average Recall and Precision only for the classes that have at least one correct prediction 
@@ -303,10 +288,6 @@ f_score_non_zeros = 2 * precision_avg_nonzeros * recall_avg_nonzeros / (precisio
 print(f' Recall of non-zeros    = { recall_avg_nonzeros * 100    :.2f}%')
 print(f' Precision of non-zeros = { precision_avg_nonzeros * 100 :.2f}%')
 print(f' F-score of non-zeros   = { f_score_non_zeros * 100      :.2f}%')
-file_object.write(f'Recall of non-zeros    = { recall_avg_nonzeros * 100    :.2f}%\n')
-file_object.write(f'Precision of non-zeros = { precision_avg_nonzeros * 100 :.2f}%\n')
-file_object.write(f'F-score of non-zeros   = { f_score_non_zeros * 100      :.2f}%\n')
-
 
 #%% Find the number of instances of zero-accuracy classes
 counter_of_zero_accuracy_classes = 0
@@ -315,10 +296,7 @@ for key in classes_acc:
     if classes_acc[key] == 0:
         counter_of_zero_accuracy_classes += classes_distribution_test[key]
 
-print('Number of instances of zero-accuracy classes:', counter_of_zero_accuracy_classes) 
-file_object.write(f'Number of instances of zero-accuracy classes = {counter_of_zero_accuracy_classes :d}\n')
-file_object.close()
-
+print('Number of instances of zero-accuracy classes:', counter_of_zero_accuracy_classes) # 13210
 
 
 
@@ -345,21 +323,27 @@ LSTM_model.save(filepath)
 
 
 
+# #%% STEP 10: Load saved stats, confusion matrix and model
+# model = load_model(filepath)
 
-#%% STEP 10: Load saved stats, confusion matrix and model
-model = load_model(filepath)
+# with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'rb') as fp:   
+#     classes_acc = pickle.load(fp)
 
-with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'rb') as fp:   
-    classes_acc = pickle.load(fp)
+# with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'rb') as fp:    
+#     classes_distribution_test = pickle.load(fp)
 
-with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'rb') as fp:    
-    classes_distribution_test = pickle.load(fp)
+# with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'rb') as fp:    
+#     confusion_matrix = pickle.load(fp)
 
-with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'rb') as fp:    
-    confusion_matrix = pickle.load(fp)
+# with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'rb') as fp:     
+#     confusion_matrix_dataframe = pickle.load(fp)
 
-with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'rb') as fp:     
-    confusion_matrix_dataframe = pickle.load(fp)
+# with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
+#     train_history = pickle.load(fp)
 
-with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
-    train_history = pickle.load(fp)
+# loss_list        = train_history['loss']
+# cos_sim_list     = train_history['cosine_similarity']
+# val_loss_list    = train_history['val_loss']
+# val_cos_sim_list = train_history['val_cosine_similarity']
+
+

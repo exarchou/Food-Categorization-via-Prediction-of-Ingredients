@@ -1,37 +1,34 @@
 # =============================================================================
 # Script to train and evaluate an LSTM model for the classification problem of Food-101
-# Reloaded Edition of 2 LSTMS of 256 and 512 neurons
 # Author: Dimitrios-Marios Exarchou
-# Last modified: 21/8/2021   
-# 
-# Top-1   Accuracy = 34.49 %
-# Top-10  Accuracy = 53.56 %
-# Top-20  Accuracy = 61.42 %
-# Top-50  Accuracy = 64.86 %
-#
-# Training time: 46m 54s
+# Last modified: 13/9/2021   
 # =============================================================================
 
 
-#%% STEP 1: Libraries
+# Arguments
+dropout           = 0.30
+recurrent_dropout = 0.30
+units             = 256
+batch_size        = 512
+
+
+
+
+
+#%% STEP 1: Loading Libraries
 import os
 import time
-import math
 import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from keras import metrics
 from keras.models import Sequential
-from keras.layers import Embedding, LSTM, Dense, SpatialDropout1D, Dropout, Bidirectional
+from keras.layers import Embedding, LSTM, Dense, Bidirectional
 from keras.initializers import Constant
-from keras.callbacks import EarlyStopping
 from keras.models import load_model
-from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
+from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger, ReduceLROnPlateau
 from keras.optimizers import Adam
-from keras.callbacks import LearningRateScheduler
-from tqdm.keras import TqdmCallback
 from gensim.models import KeyedVectors
 from gensim.similarities.annoy import AnnoyIndexer
 from sklearn.metrics import confusion_matrix
@@ -40,9 +37,9 @@ from sklearn.utils.class_weight import compute_class_weight
 
 
 
+
 #%% STEP 2: Loading necessary files
 # Directories
-current_data_dir     = 'X:/thesis/Task3/food-101'
 im2recipe_data_dir   = 'X:/thesis_outputs/InverseCooking'
 word2vec_data        = 'X:/thesis_outputs/Task3/word2vec_data'
 annoy_indexer_dir    = 'X:/thesis_outputs/Task3/annoy_index'
@@ -69,6 +66,10 @@ word2vec_model = KeyedVectors.load_word2vec_format(os.path.join(word2vec_data, '
 annoy_index = AnnoyIndexer()
 annoy_index.load(annoy_indexer_dir)
 
+# Create a file
+file_object = open(os.path.join(save_output_dir, 'meta.txt'), 'a')
+
+
 
 
 
@@ -79,165 +80,54 @@ LSTM_model.add(Embedding(len(ingr_vocab),                                   # nu
                          embeddings_initializer=Constant(embedding_matrix), # initialization of matrix 
                          input_length=MAX_SEQUENCE_LENGTH,                  # max number of ingredients
                          trainable=True))
-LSTM_model.add(Dropout(0.2))
-LSTM_model.add(Bidirectional(LSTM(512, dropout=0.2, recurrent_dropout=0.5, return_sequences=True)))
-LSTM_model.add(Bidirectional(LSTM(256, dropout=0.2, recurrent_dropout=0.5)))
-LSTM_model.add(Dense(EMBEDDING_VECTOR_LENGTH, activation='relu'))
+LSTM_model.add(Bidirectional(LSTM(units, dropout=dropout, recurrent_dropout=recurrent_dropout, return_sequences=True)))
+LSTM_model.add(Bidirectional(LSTM(units, dropout=dropout, recurrent_dropout=recurrent_dropout)))
+LSTM_model.add(Dense(EMBEDDING_VECTOR_LENGTH, activation='tanh'))
 
 LSTM_model.summary()
 
 
 
 
+
 #%% STEP 4: Training Process
-
-# Function to get Learning Rate
-def get_lr_metric(optimizer):
-    def lr(y_true, y_pred):
-        return optimizer.lr
-    return lr
-
-# Learning Rate schedule
-def lr_step_decay(epoch):
-	initial_lrate = 0.005
-	drop = 0.2
-	epochs_drop = 10
-	lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-	return lrate
-
+since = time.time()  
 
 # Optimizer
-optimizer = Adam()
-lr_metric = get_lr_metric(optimizer)
-
+optimizer = Adam(learning_rate=0.002)
 
 # Model Compile
-LSTM_model.compile(loss='mse', optimizer=optimizer, metrics=[metrics.CosineSimilarity(axis=1)])
+LSTM_model.compile(loss='cosine_similarity', optimizer=optimizer)
 
+# Callbacks
+filepath = os.path.join(save_output_dir, 'weights-{epoch:02d}-{val_loss:.4f}.hdf5')                                                    # File name includes epoch and validation accuracy
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', save_best_only=True, mode='min', verbose=1)                                 # Use Mode = max for accuracy and min for loss
+early_stop = EarlyStopping(monitor='val_loss', mode='min', min_delta = 0.00025, patience=6, restore_best_weights=True, verbose=1)      # Early Stopping if val loss does not drop for at least 0.00025 in 6 epochs.                
+log_csv = CSVLogger(os.path.join(save_output_dir, 'my_logs2csv') , separator='\t', append=True)                                        # CSVLogger logs epoch, acc, loss, val_acc, val_loss
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', mode='min', factor=0.2, patience=3, min_delta=0.00025, verbose=1)                    # Redule lr if val loss does not drop for at least 0.00025 at 3 epochs.
+callbacks_list = [checkpoint, early_stop, log_csv, reduce_lr]
 
 
 # Model Train
-since = time.time()  
-history = LSTM_model.fit(X_train, y_train, epochs=24, batch_size=256, validation_data=(X_valid, y_valid), verbose=1, callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)]) 
+history = LSTM_model.fit(X_train, y_train, epochs=24, batch_size=batch_size, validation_data=(X_valid, y_valid), verbose=1, callbacks=callbacks_list) 
+
 time_elapsed = time.time() - since
 print('\nTraining complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))   
- 
+file_object.write('Training complete in {:.0f}m {:.0f}s\n'.format(time_elapsed // 60, time_elapsed % 60))
 
 
-# =============================================================================
-# Training log stats 
-# 
-# Epoch 00001: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 1/24
-# 277/277 [==============================] - 115s 417ms/step - loss: 0.0336 - cosine_similarity: 0.4431 - val_loss: 0.0323 - val_cosine_similarity: 0.4776
-# 
-# Epoch 00002: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 2/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0314 - cosine_similarity: 0.4962 - val_loss: 0.0309 - val_cosine_similarity: 0.5079
-# 
-# Epoch 00003: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 3/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0307 - cosine_similarity: 0.5135 - val_loss: 0.0305 - val_cosine_similarity: 0.5175
-# 
-# Epoch 00004: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 4/24
-# 277/277 [==============================] - 115s 416ms/step - loss: 0.0303 - cosine_similarity: 0.5222 - val_loss: 0.0302 - val_cosine_similarity: 0.5235
-# 
-# Epoch 00005: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 5/24
-# 277/277 [==============================] - 117s 423ms/step - loss: 0.0301 - cosine_similarity: 0.5268 - val_loss: 0.0302 - val_cosine_similarity: 0.5251
-# 
-# Epoch 00006: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 6/24
-# 277/277 [==============================] - 116s 417ms/step - loss: 0.0299 - cosine_similarity: 0.5301 - val_loss: 0.0301 - val_cosine_similarity: 0.5270
-# 
-# Epoch 00007: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 7/24
-# 277/277 [==============================] - 118s 428ms/step - loss: 0.0298 - cosine_similarity: 0.5326 - val_loss: 0.0300 - val_cosine_similarity: 0.5287
-# 
-# Epoch 00008: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 8/24
-# 277/277 [==============================] - 119s 429ms/step - loss: 0.0297 - cosine_similarity: 0.5349 - val_loss: 0.0300 - val_cosine_similarity: 0.5286
-# 
-# Epoch 00009: LearningRateScheduler reducing learning rate to 0.005.
-# Epoch 9/24
-# 277/277 [==============================] - 117s 421ms/step - loss: 0.0296 - cosine_similarity: 0.5367 - val_loss: 0.0300 - val_cosine_similarity: 0.5283
-# 
-# Epoch 00010: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 10/24
-# 277/277 [==============================] - 118s 425ms/step - loss: 0.0292 - cosine_similarity: 0.5445 - val_loss: 0.0299 - val_cosine_similarity: 0.5310
-# 
-# Epoch 00011: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 11/24
-# 277/277 [==============================] - 121s 436ms/step - loss: 0.0290 - cosine_similarity: 0.5473 - val_loss: 0.0299 - val_cosine_similarity: 0.5309
-# 
-# Epoch 00012: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 12/24
-# 277/277 [==============================] - 116s 418ms/step - loss: 0.0289 - cosine_similarity: 0.5492 - val_loss: 0.0299 - val_cosine_similarity: 0.5305
-# 
-# Epoch 00013: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 13/24
-# 277/277 [==============================] - 115s 416ms/step - loss: 0.0289 - cosine_similarity: 0.5506 - val_loss: 0.0300 - val_cosine_similarity: 0.5294
-# 
-# Epoch 00014: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 14/24
-# 277/277 [==============================] - 115s 415ms/step - loss: 0.0288 - cosine_similarity: 0.5522 - val_loss: 0.0300 - val_cosine_similarity: 0.5296
-# 
-# Epoch 00015: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 15/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0287 - cosine_similarity: 0.5539 - val_loss: 0.0301 - val_cosine_similarity: 0.5284
-# 
-# Epoch 00016: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 16/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0286 - cosine_similarity: 0.5553 - val_loss: 0.0301 - val_cosine_similarity: 0.5276
-# 
-# Epoch 00017: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 17/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0285 - cosine_similarity: 0.5569 - val_loss: 0.0302 - val_cosine_similarity: 0.5273
-# 
-# Epoch 00018: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 18/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0285 - cosine_similarity: 0.5588 - val_loss: 0.0301 - val_cosine_similarity: 0.5271
-# 
-# Epoch 00019: LearningRateScheduler reducing learning rate to 0.001.
-# Epoch 19/24
-# 277/277 [==============================] - 115s 415ms/step - loss: 0.0284 - cosine_similarity: 0.5604 - val_loss: 0.0302 - val_cosine_similarity: 0.5261
-# 
-# Epoch 00020: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 20/24
-# 277/277 [==============================] - 115s 414ms/step - loss: 0.0281 - cosine_similarity: 0.5649 - val_loss: 0.0303 - val_cosine_similarity: 0.5254
-# 
-# Epoch 00021: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 21/24
-# 277/277 [==============================] - 115s 416ms/step - loss: 0.0281 - cosine_similarity: 0.5661 - val_loss: 0.0303 - val_cosine_similarity: 0.5252
-# 
-# Epoch 00022: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 22/24
-# 277/277 [==============================] - 118s 428ms/step - loss: 0.0280 - cosine_similarity: 0.5667 - val_loss: 0.0303 - val_cosine_similarity: 0.5249
-# 
-# Epoch 00023: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 23/24
-# 277/277 [==============================] - 120s 435ms/step - loss: 0.0280 - cosine_similarity: 0.5675 - val_loss: 0.0303 - val_cosine_similarity: 0.5246
-# 
-# Epoch 00024: LearningRateScheduler reducing learning rate to 0.00020000000000000004.
-# Epoch 24/24
-# 277/277 [==============================] - 121s 438ms/step - loss: 0.0280 - cosine_similarity: 0.5681 - val_loss: 0.0304 - val_cosine_similarity: 0.5241
-# 
-# Training complete in 46m 54s
-# =============================================================================
 
 
 
 #%% STEP 5: Evaluation with Annoy Indexer
-
-# Find the accuracies of classes
+# Initialize a zero vector for the accuracy of the classes
 classes_acc = dict() 
 
 for i in range(len(y_test_int)):
     classes_acc[classes_reloaded[y_test_int[i]]] = 0
 
 # Find Accuracies 
-top1_accuracy, top10_accuracy, top20_accuracy, top50_accuracy = 0, 0, 0, 0
+top1_accuracy, top5_accuracy, top10_accuracy, top20_accuracy = 0, 0, 0, 0
 
 # Predictions
 predictions = LSTM_model.predict(X_test, batch_size=256, verbose=1)
@@ -269,31 +159,34 @@ for i in tqdm(range(len(predictions))):
         classes_acc[classes_reloaded[original_class]] += 1
         
     # Top-10 Accuracy
-    if classes_reloaded[original_class] in ranked_classes[:10]:
-        top10_accuracy += 1
+    if classes_reloaded[original_class] in ranked_classes[:5]:
+        top5_accuracy += 1
                 
     # Top-20 Accuracy
-    if classes_reloaded[original_class] in ranked_classes[:20]:
-        top20_accuracy += 1
+    if classes_reloaded[original_class] in ranked_classes[:10]:
+        top10_accuracy += 1
  
     # Top-50 Accuracy
-    if classes_reloaded[original_class] in ranked_classes[:50]:
-        top50_accuracy += 1
+    if classes_reloaded[original_class] in ranked_classes[:20]:
+        top20_accuracy += 1
 
             
-print()
+print('\n' + '=' * 30)
+print(f'Top-1   Accuracy = {  top1_accuracy * 100 / len(X_test) :.2f}%')
+print(f'Top-5  Accuracy = { top10_accuracy * 100 / len(X_test) :.2f}%')
+print(f'Top-10  Accuracy = { top20_accuracy * 100 / len(X_test) :.2f}%')
+print(f'Top-20  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f}%')
 print('=' * 30)
-print(f'Top-1   Accuracy = {  top1_accuracy * 100 / len(X_test) :.2f} %')
-print(f'Top-10  Accuracy = { top10_accuracy * 100 / len(X_test) :.2f} %')
-print(f'Top-20  Accuracy = { top20_accuracy * 100 / len(X_test) :.2f} %')
-print(f'Top-50  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f} %')
-print('=' * 30)
+file_object.write(f'Top-1   Accuracy = {  top1_accuracy * 100 / len(X_test) :.2f}%\n')
+file_object.write(f'Top-5  Accuracy = { top10_accuracy * 100 / len(X_test) :.2f}%\n')
+file_object.write(f'Top-10  Accuracy = { top20_accuracy * 100 / len(X_test) :.2f}%\n')
+file_object.write(f'Top-20  Accuracy = { top50_accuracy * 100 / len(X_test) :.2f}%\n')
 
 
 
 
 
-#%% STEP 6: Find classes' Accuracy & Confusion Matrix
+#%% STEP 6: Accuracy of Classes & Confusion Matrix
 classes_distribution_test = dict()
 
 for i in range(len(y_test_int)):
@@ -310,8 +203,8 @@ for key in classes_acc:
     if classes_acc[key] != 0:
         counter += 1
         
-print('Number of classes with at least one correct prediction:', counter) #257
-
+print('Number of classes with at least one correct prediction:', counter) 
+file_object.write(f'Number of classes with at least one correct prediction = {counter :d}\n')
 
 # Confusion Matrix
 y_true = []
@@ -325,99 +218,44 @@ for key in classes_reloaded:
     if key not in classes_names:
         classes_names.append(key)
 
+confusion_matrix = confusion_matrix(y_true, y_pred, labels=classes_names)
 
-cm = confusion_matrix(y_true, y_pred, labels=classes_names)
-
-# Measure top-1 Accuracy from the diagonal of confusion matrix
+# Measure top-1 Accuracy from the diagonal of confusion matrix for validation
 accuracy = 0
 
-for i in range(cm.shape[0]):
-    for j in range(cm.shape[1]):
+for i in range(confusion_matrix.shape[0]):
+    for j in range(confusion_matrix.shape[1]):
         if i == j:
-            accuracy += cm[i][j]
+            accuracy += confusion_matrix[i][j]
 
-accuracy /= np.sum(cm)
+accuracy /= np.sum(confusion_matrix)
 accuracy *= 100
-
 print(f'Top-1   Accuracy = {  accuracy:.2f} %')
 
-
 # Transform confusion matrix into dataframe
-cm_df = pd.DataFrame(cm, columns=classes_names, index=classes_names)
+cm_df = pd.DataFrame(confusion_matrix, columns=classes_names, index=classes_names)
 
 
 
 
 
-#%% Save classes stats, confusion matrix and model
+#%% STEP 7: Plot Learning Curves
+train_history = history.history
+cos_sim_list     = train_history['loss']
+val_cos_sim_list = train_history['val_loss']
 
-# with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
-#     pickle.dump(classes_acc, fp)
-
-# with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
-#     pickle.dump(classes_distribution_test, fp)
-
-
-# with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
-#     pickle.dump(cm, fp)
-
-# with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
-#     pickle.dump(cm_df, fp)
-
-
-# with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
-#     pickle.dump(history.history, fp)
-
-# LSTM_model.save(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
-
-
-
-
-
-
-#%% Plot Learning curves
-model = load_model(os.path.join(save_output_dir, 'LSTM_model_34.49.h5'))
-
-with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
-    train_history = pickle.load(fp)
-
-loss_list        = train_history['loss']
-cos_sim_list     = train_history['cosine_similarity']
-val_loss_list    = train_history['val_loss']
-val_cos_sim_list = train_history['val_cosine_similarity']
-
-
-
-plt.plot(loss_list, label='Training loss')
-plt.plot(val_loss_list, label='Validation loss')
+# Plot Learning curves
+plt.plot(cos_sim_list, label='Train. Cos.Sim.')
+plt.plot(val_cos_sim_list, label='Val. Cos.Sim.')
 plt.legend(frameon=False)
-plt.savefig(os.path.join(save_output_dir, 'loss.jpg'), transparent=True, dpi=200)
-plt.show()
-
-plt.plot(cos_sim_list, label='Train Cos. Sim.')
-plt.plot(val_cos_sim_list, label='Test Cos. Sim.')
-plt.legend(frameon=False)
-plt.savefig(os.path.join(save_output_dir, 'cos_sim.jpg'), transparent=True, dpi=200)
+plt.savefig(os.path.join(save_output_dir, 'Cos.Sim.jpg'), transparent=True, dpi=200)
 plt.show()
 
 
 
-#%% Plot Classes' Accuracies
-with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'rb') as fp:   
-    classes_acc = pickle.load(fp)
-
-with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'rb') as fp:    
-    classes_distribution_test = pickle.load(fp)
-
-with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'rb') as fp:    
-    confusion_matrix = pickle.load(fp)
-
-with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'rb') as fp:     
-    confusion_matrix_dataframe = pickle.load(fp)
 
 
-
-#%% Calculate Recall and Precision
+#%% STEP 8: Print Recall, Precision and F1-score
 recall    = np.diag(confusion_matrix) / np.sum(confusion_matrix, axis = 1)
 precision = np.diag(confusion_matrix) / np.sum(confusion_matrix, axis = 0)
 
@@ -428,15 +266,15 @@ recall[np.isnan(recall)], precision[np.isnan(precision)] = 0, 0
 recall_avg, precision_avg = np.mean(recall), np.mean(precision)
 f_score = 2 * precision_avg * recall_avg / (precision_avg + recall_avg)
 
-print()
-print('=' * 20)
 print(f' Recall    = { recall_avg * 100    :.2f}%')
 print(f' Precision = { precision_avg * 100 :.2f}%')
 print(f' F-score   = { f_score * 100       :.2f}%')
-print('=' * 20)
+file_object.write(f'Recall    = { recall_avg * 100    :.2f}%\n')
+file_object.write(f'Precision = { precision_avg * 100 :.2f}%\n')
+file_object.write(f'F-score   = { f_score * 100       :.2f}%\n')
 
 
-# Find Average Recall and Precision only for the classes that have at least one correct prediction (257)
+# Find Average Recall and Precision only for the classes that have at least one correct prediction 
 counter_non_zeros = 0
 
 for i in range(len(recall)):  
@@ -445,7 +283,6 @@ for i in range(len(recall)):
         
 recall_avg_nonzeros = np.sum(recall) / counter_non_zeros
 
-
 counter_non_zeros = 0
 
 for i in range(len(precision)): 
@@ -453,30 +290,70 @@ for i in range(len(precision)):
         counter_non_zeros += 1
 
 precision_avg_nonzeros = np.sum(precision) / counter_non_zeros
-
 f_score_non_zeros = 2 * precision_avg_nonzeros * recall_avg_nonzeros / (precision_avg_nonzeros + recall_avg_nonzeros)
 
-print()
-print('=' * 33)
 print(f' Recall of non-zeros    = { recall_avg_nonzeros * 100    :.2f}%')
 print(f' Precision of non-zeros = { precision_avg_nonzeros * 100 :.2f}%')
 print(f' F-score of non-zeros   = { f_score_non_zeros * 100      :.2f}%')
-print('=' * 33)
+file_object.write(f'Recall of non-zeros    = { recall_avg_nonzeros * 100    :.2f}%\n')
+file_object.write(f'Precision of non-zeros = { precision_avg_nonzeros * 100 :.2f}%\n')
+file_object.write(f'F-score of non-zeros   = { f_score_non_zeros * 100      :.2f}%\n')
+
+
+#%% Find the number of instances of zero-accuracy classes
+counter_of_zero_accuracy_classes = 0
+
+for key in classes_acc:
+    if classes_acc[key] == 0:
+        counter_of_zero_accuracy_classes += classes_distribution_test[key]
+
+print('Number of instances of zero-accuracy classes:', counter_of_zero_accuracy_classes) 
+file_object.write(f'Number of instances of zero-accuracy classes = {counter_of_zero_accuracy_classes :d}\n')
+file_object.close()
+
+
+
+
+
+#%% STEP 9: Save stats, confusion matrix and model
+with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'wb') as fp:   
+    pickle.dump(classes_acc, fp)
+
+with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'wb') as fp:    
+    pickle.dump(classes_distribution_test, fp)
+
+with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'wb') as fp:    
+    pickle.dump(confusion_matrix, fp)
+
+with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'wb') as fp:     
+    pickle.dump(cm_df, fp)
+
+with open(os.path.join(save_output_dir, 'history.pkl'), 'wb') as fp:
+    pickle.dump(history.history, fp)
+
+filepath = os.path.join(save_output_dir, str('LSTM_model_{:.2f}.h5'.format(accuracy)))       
+LSTM_model.save(filepath)
+
+
 
 
 
 # =============================================================================
-# ====================
-#  Recall    = 34.49%
-#  Precision = 42.51%
-#  F-score   = 38.08%
-# ====================
+# #%% STEP 10: Load saved stats, confusion matrix and model
+# model = load_model(filepath)
 # 
-# =================================
-#  Recall of non-zeros    = 34.83%
-#  Precision of non-zeros = 42.94%
-#  F-score of non-zeros   = 38.46%
-# =================================
+# with open(os.path.join(save_output_dir, 'classes_acc.pkl'), 'rb') as fp:   
+#     classes_acc = pickle.load(fp)
+# 
+# with open(os.path.join(save_output_dir, 'classes_distribution_test.pkl'), 'rb') as fp:    
+#     classes_distribution_test = pickle.load(fp)
+# 
+# with open(os.path.join(save_output_dir, 'confusion_matrix.pkl'), 'rb') as fp:    
+#     confusion_matrix = pickle.load(fp)
+# 
+# with open(os.path.join(save_output_dir, 'confusion_matrix_dataframe.pkl'), 'rb') as fp:     
+#     confusion_matrix_dataframe = pickle.load(fp)
+# 
+# with open(os.path.join(save_output_dir, 'history.pkl'), 'rb') as fp:
+#     train_history = pickle.load(fp)
 # =============================================================================
-
-

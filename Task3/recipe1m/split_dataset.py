@@ -139,5 +139,3 @@ ans1 = y_train.value_counts() / len(y_train)
 ans2 = y_valid.value_counts() / len(y_valid)
 ans3 = y_test.value_counts()  / len(y_test)
 
-
-
