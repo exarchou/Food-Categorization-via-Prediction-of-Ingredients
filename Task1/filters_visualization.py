@@ -111,4 +111,3 @@ for num_layer in range(len(outputs)):
     # plt.show()
     plt.close()
 
-
