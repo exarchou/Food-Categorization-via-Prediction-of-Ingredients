@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['Task3\\recipe1m\\build_dataset.py', 'Task3\\recipe1m\\split_dataset.py', 'Task3\\recipe1m\\replace_invalids.py', 'Task3\\recipe1m\\train_model.py']
+recent_files = ['..\\thesis_experiments\\class_weights\\L256_L256.py']
 
