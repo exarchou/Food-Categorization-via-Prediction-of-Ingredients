@@ -30,4 +30,4 @@ The entire thesis report can be found [here](https://drive.google.com/file/d/1eX
 ---
 ## Author
 
-* [Dimitrios-Marios Exarhou](https://github.com/exarchou) 
+* [Dimitrios-Marios Exarchou](https://github.com/exarchou) 
